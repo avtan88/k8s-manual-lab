@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manual-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: manual-app
+  template:
+    metadata:
+      labels:
+        app: manual-app
+    spec:
+      containers:
+      - name: manual-app
+        image: aisalkyn85/manual-k8s-app:v1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
