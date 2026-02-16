@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: manual-app
-        image: aisalkyn85/manual-k8s-app:v1
+        image: avtan1/manual-k8s-app:v1
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
