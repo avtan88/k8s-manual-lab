@@ -4,16 +4,26 @@ pipeline {
     environment {
         DOCKER_IMAGE = "avtan1/manual-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
-        CD_REPO = "avtan88/manual-app-helm"
+        CD_REPO = "Avtan88/manual-app-helm"  // GitHub repo для CD (Helm chart)
     }
 
     stages {
-        stage('Checkout') { steps { checkout scm } }
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
 
-        stage('Install Dependencies') { steps { sh 'npm install' } }
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
 
         stage('Build Docker Image') {
-            steps { sh 'docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .' }
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
+            }
         }
 
         stage('Login to DockerHub') {
@@ -29,7 +39,9 @@ pipeline {
         }
 
         stage('Push Image') {
-            steps { sh 'docker push ${DOCKER_IMAGE}:${IMAGE_TAG}' }
+            steps {
+                sh "docker push ${DOCKER_IMAGE}:${IMAGE_TAG}"
+            }
         }
 
         stage('Update CD Repo') {
@@ -40,18 +52,36 @@ pipeline {
                     passwordVariable: 'GIT_PASS'
                 )]) {
                     sh """
+                    # Удаляем старую папку
                     rm -rf cd-repo
+
+                    # Клонируем CD repo с правильным URL
                     git clone https://${GIT_USER}:${GIT_PASS}@github.com/${CD_REPO}.git cd-repo
                     cd cd-repo
-                    sed -i 's/tag:.*/tag: "${IMAGE_TAG}"/' values.yaml
+
+                    # Обновляем image tag в values.yaml
+                    sed -i "s/tag:.*/tag: '${IMAGE_TAG}'/" values.yaml
+
+                    # Настройка git
                     git config user.email "jenkins@jumptotech.com"
                     git config user.name "jenkins"
+
+                    # Commit и push (не падаем, если изменений нет)
                     git add values.yaml
                     git commit -m "Update image tag to ${IMAGE_TAG}" || true
-                    git push
+                    git push origin main
                     """
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Build, push, and CD update completed successfully!"
+        }
+        failure {
+            echo "❌ Pipeline failed. Check logs!"
         }
     }
 }
