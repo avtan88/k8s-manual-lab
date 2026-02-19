@@ -4,31 +4,16 @@ pipeline {
     environment {
         DOCKER_IMAGE = "avtan1/manual-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
+        CD_REPO = "jumptotechschooldevops/manual-app-helm"
     }
 
     stages {
+        stage('Checkout') { steps { checkout scm } }
 
-        stage('Checkout') {
-            steps {
-                echo "Cloning repository..."
-                checkout scm
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                echo "Installing npm dependencies..."
-                sh 'npm install'
-            }
-        }
+        stage('Install Dependencies') { steps { sh 'npm install' } }
 
         stage('Build Docker Image') {
-            steps {
-                echo "Building Docker image..."
-                sh """
-                docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .
-                """
-            }
+            steps { sh 'docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .' }
         }
 
         stage('Login to DockerHub') {
@@ -38,32 +23,35 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh """
-                    echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-                    """
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
 
         stage('Push Image') {
-            steps {
-                echo "Pushing image to DockerHub..."
-                sh """
-                docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-                """
-            }
+            steps { sh 'docker push ${DOCKER_IMAGE}:${IMAGE_TAG}' }
         }
-    }
 
-    post {
-        success {
-            echo "CI Pipeline completed successfully!"
-        }
-        failure {
-            echo "CI Pipeline failed!"
-        }
-        always {
-            echo "Pipeline finished."
+        stage('Update CD Repo') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-creds',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_PASS'
+                )]) {
+                    sh """
+                    rm -rf cd-repo
+                    git clone https://${GIT_USER}:${GIT_PASS}@github.com/${CD_REPO}.git cd-repo
+                    cd cd-repo
+                    sed -i 's/tag:.*/tag: "${IMAGE_TAG}"/' values.yaml
+                    git config user.email "jenkins@jumptotech.com"
+                    git config user.name "jenkins"
+                    git add values.yaml
+                    git commit -m "Update image tag to ${IMAGE_TAG}" || true
+                    git push
+                    """
+                }
+            }
         }
     }
 }
