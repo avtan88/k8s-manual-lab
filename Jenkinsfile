@@ -52,21 +52,16 @@ pipeline {
                     passwordVariable: 'GIT_PASS'
                 )]) {
                     sh """
-                    # Удаляем старую папку
                     rm -rf cd-repo
-
-                    # Клонируем CD repo с правильным URL
                     git clone https://${GIT_USER}:${GIT_PASS}@github.com/${CD_REPO}.git cd-repo
                     cd cd-repo
 
                     # Обновляем image tag в values.yaml
                     sed -i "s/tag:.*/tag: '${IMAGE_TAG}'/" values.yaml
 
-                    # Настройка git
                     git config user.email "jenkins@jumptotech.com"
                     git config user.name "jenkins"
 
-                    # Commit и push (не падаем, если изменений нет)
                     git add values.yaml
                     git commit -m "Update image tag to ${IMAGE_TAG}" || true
                     git push origin main
