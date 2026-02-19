@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "avtan1/manual-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
-        CD_REPO = "jumptotechschooldevops/manual-app-helm"
+        CD_REPO = "avtan88/manual-app-helm"
     }
 
     stages {
